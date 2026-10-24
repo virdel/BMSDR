@@ -14,16 +14,9 @@ Thumbs.db
 desktop.ini
 
 # ---------------------------------------------------------------------------
-# Experiment data and generated outputs (tens of GB, kept outside git)
+# Experiment data, scripts and generated outputs (tens of GB, kept outside git)
 # ---------------------------------------------------------------------------
-/experiment/data/
-/experiment/result/
-/experiment/模型/
-/experiment/过程可视化结果/
-/experiment/实验指标统计/binary/
-/experiment/实验指标统计/metric_bin/
-/experiment/实验指标统计/qem_ratio_0.01/
-/experiment/实验指标统计/*.ipynb
+/experiment/
 /out/
 /model_data/
 
@@ -41,3 +34,5 @@ desktop.ini
 # Build / debug artifacts
 # ---------------------------------------------------------------------------
 *.pdb
+
+/temp_*/
