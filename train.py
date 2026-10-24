@@ -8,6 +8,13 @@
 
 """BMS-DR 训练入口：用可微渲染把建筑低模拟合到高模。
 
+对应论文
+--------
+W. Chen, Y. Zhang, L. Chen, L. Wan, and L. Ding, "Generation of
+appearance-driven low-poly textured building models with differentiable
+rendering," Journal of Computing in Civil Engineering, vol. 39, no. 5,
+p. 04025052, 2025. doi: 10.1061/JCCEE5.CPENG-6282
+
 整体流程
 --------
 1. ``main`` 读取配置，清理参考 OBJ，准备初始低模：

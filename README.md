@@ -1,8 +1,11 @@
 # BMS-DR
 
 **BMS-DR**（**B**uilding **M**esh **S**implification with **D**ifferentiable **R**endering）
-是一个面向建筑模型的可微渲染简化工程：用可微渲染拟合纹理与几何，把建筑高模简化为
-带贴图的低模。它基于 NVIDIA [nvdiffmodeling](https://github.com/NVlabs/nvdiffmodeling)
+是论文 *Generation of Appearance-Driven Low-Poly Textured Building Models with
+Differentiable Rendering*（*Journal of Computing in Civil Engineering*, 2025）的
+参考实现：用可微渲染拟合纹理与几何，把建筑高模简化为带贴图的低模。
+
+本项目基于 NVIDIA [nvdiffmodeling](https://github.com/NVlabs/nvdiffmodeling)
 （论文 *Appearance-Driven Automatic 3D Model Simplification*），在其之上做了精简：
 去掉 Blender / pymeshlab / xatlas 依赖，内置纯 Python 的分块 UV 展开器，并把
 实验性代码集中到 `dev` 分支。
@@ -133,12 +136,35 @@ tests/                UV 展开单元测试
 dev 分支              Blender/xatlas UV、alpha shape、批量/联合训练等历史代码
 ```
 
-## License & Citation
+## 论文与引用
 
-Copyright © 2021, NVIDIA Corporation. 本工程基于 NVIDIA Source Code License 发布，
-详见 [LICENSE.txt](LICENSE.txt)。
+本项目对应论文：
 
+> W. Chen, Y. Zhang, L. Chen, L. Wan, and L. Ding,
+> “Generation of appearance-driven low-poly textured building models with
+> differentiable rendering,” *Journal of Computing in Civil Engineering*,
+> vol. 39, no. 5, p. 04025052, 2025.
+> doi: [10.1061/JCCEE5.CPENG-6282](https://doi.org/10.1061/JCCEE5.CPENG-6282)
+
+```bibtex
+@article{chen2025generation,
+  title   = {Generation of Appearance-Driven Low-Poly Textured Building Models
+             with Differentiable Rendering},
+  author  = {Chen, W. and Zhang, Y. and Chen, L. and Wan, L. and Ding, L.},
+  journal = {Journal of Computing in Civil Engineering},
+  volume  = {39},
+  number  = {5},
+  pages   = {04025052},
+  year    = {2025},
+  doi     = {10.1061/JCCEE5.CPENG-6282}
+}
 ```
+
+## 上游工作与许可
+
+可微渲染核心来自 NVIDIA nvdiffmodeling；使用上游代码时请同时引用：
+
+```bibtex
 @inproceedings{Hasselgren2021,
   title     = {Appearance-Driven Automatic 3D Model Simplification},
   author    = {Jon Hasselgren and Jacob Munkberg and Jaakko Lehtinen and Miika Aittala and Samuli Laine},
@@ -146,3 +172,6 @@ Copyright © 2021, NVIDIA Corporation. 本工程基于 NVIDIA Source Code Licens
   year      = {2021}
 }
 ```
+
+Copyright © 2021, NVIDIA Corporation. 本工程基于 NVIDIA Source Code License 发布，
+详见 [LICENSE.txt](LICENSE.txt)。
