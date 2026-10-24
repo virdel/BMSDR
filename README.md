@@ -109,8 +109,9 @@ python -m unittest discover -s tests -v
 
 ## 数据说明
 
-`experiment/` 下的模型与训练结果约 45 GB，已写入 [`.gitignore`](.gitignore)，
-不会进入 Git 历史；它们仍保留在本地磁盘上。`main` 只跟踪代码、配置和文档。
+整个 `experiment/` 目录（模型、训练结果、实验统计等，约 45 GB）都不纳入 Git
+跟踪，已在 [`.gitignore`](.gitignore) 中整体忽略；文件仍保留在本地磁盘。
+`main` 只跟踪代码、配置和文档。
 
 ## 目录
 
@@ -123,7 +124,7 @@ src/                  可微渲染核心（上游代码）
 bin/qem/              QEM 可执行文件
 configs/              示例配置（example.json + upstream/ 原始论文配置，见 configs/README.md）
 tests/                UV 展开单元测试
-dev 分支              Blender/xatlas UV、alpha shape、批量训练、指标统计等历史代码
+dev 分支              Blender/xatlas UV、alpha shape、批量/联合训练等历史代码
 ```
 
 ## License & Citation
