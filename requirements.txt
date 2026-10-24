@@ -1,0 +1,12 @@
+# Core runtime dependencies.
+# Install a CUDA-enabled PyTorch build for your driver first, for example:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu118
+numpy>=1.19
+pandas
+matplotlib
+imageio
+PyOpenGL
+glfw
+
+# nvdiffrast is not a plain pip package; install it from source:
+#   https://nvlabs.github.io/nvdiffrast/

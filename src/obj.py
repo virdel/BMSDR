@@ -10,16 +10,13 @@ import os
 import numpy as np
 import torch
 
-from . import util
 from . import texture
 from . import mesh
 from . import material
-import  math
+
 ######################################################################################
 # Utility functions
 ######################################################################################
-def clamp(value, min_value, max_value):
-    return max(min(value, max_value), min_value)
 
 def _write_weights(folder, mesh):
     if mesh.v_weights is not None:
@@ -37,22 +34,27 @@ def _find_mat(materials, name):
             return mat
     return materials[0] # Materials 0 is the default
 
+def _parse_face_corner(token):
+    """Parse ``v``, ``v/vt``, ``v//vn`` or ``v/vt/vn`` into zero-based indices."""
+    parts = token.split('/')
+    vertex = int(parts[0]) - 1
+    texcoord = int(parts[1]) - 1 if len(parts) > 1 and parts[1] else -1
+    normal = int(parts[2]) - 1 if len(parts) > 2 and parts[2] else -1
+    return vertex, texcoord, normal
+
 ######################################################################################
 # Create mesh object from objfile
 ######################################################################################
 
 def load_obj(filename, clear_ks=True, mtl_override=None):
 
-    # print("mtl_override",mtl_override)
     ## obj所在文件夹名
     obj_path = os.path.dirname(filename)
-    # print(obj_path)
-    # Read entire file
 
     try:
         with open(filename,encoding="utf-8") as f:
             lines = f.readlines() ## 读取每一行
-    except:
+    except UnicodeDecodeError:
         with open(filename) as f:
             lines = f.readlines() ## 读取每一行
 
@@ -60,34 +62,22 @@ def load_obj(filename, clear_ks=True, mtl_override=None):
     all_materials = [
         {
             'name' : '_default_mat',
-            # 'bsdf' : 'falcor',
             'bsdf': 'pbr',
-            # 'kd'   : texture.Texture2D(torch.tensor([0.5, 0.5, 0.5], dtype=torch.float32, device='cuda')),
             'kd': texture.Texture2D(torch.tensor([1.0, 1.0, 1.0], dtype=torch.float32, device='cuda')),
             'ks'   : texture.Texture2D(torch.tensor([0.0, 0.0, 0.0], dtype=torch.float32, device='cuda'))
         }
     ]
 
     ## 如果mtl_override为None,就从文件中读取材质
-    if mtl_override is None: 
+    if mtl_override is None:
         for line in lines:
             if len(line.split()) == 0:
                 continue
             if line.split()[0] == 'mtllib':
-                # print("materials:",material.load_mtl(os.path.join(obj_path, line.split()[1]), clear_ks))
                 all_materials += material.load_mtl(os.path.join(obj_path, line.split()[1]), clear_ks) # Read in entire material library
     else:
-        # print("materials:",material.load_mtl(mtl_override))
         ##读取mtl文件中的材质信息
         all_materials += material.load_mtl(mtl_override)
-
-
-
-    ##  是否不考虑原本模型的材质信息
-    # for i in range(1,len(all_materials)):
-    #     all_materials[i]=all_materials[0]
-
-
 
     # load vertices
     vertices, texcoords, normals  = [], [], []
@@ -104,38 +94,16 @@ def load_obj(filename, clear_ks=True, mtl_override=None):
             vertices.append([float(v) for v in line.split()[1:]])
         ## 纹理坐标点
         elif prefix == 'vt':
-            # val = [float(v) for v in line.split()[1:]]
-            # val1=[]
-            # for i in val:
-            #     if i>1.0 or i<0.0:
-            #         val1.append(i - math.floor(i))
-            #     else:
-            #         val1.append(i)
-            # texcoords.append([val1[0], 1.0- val1[1]])
-
-            ## repeate
-            # val = [float(v)%1.0 for v in line.split()[1:]]
-            # texcoords.append([val[0], 1.0 - val[1]])
-
-            ##  mirror
-            val = [abs(float(v) % 2.0-1) for v in line.split()[1:]]
+            ## 部分模型的 UV 超出 [0, 1]，mirror 回贴图范围
+            val = [abs(float(v) % 2.0 - 1) for v in line.split()[1:]]
             texcoords.append([val[0], 1.0 - val[1]])
-
-            ## clamp
-            # val = [clamp(float(v),0.0,1.0) for v in line.split()[1:]]
-            # texcoords.append([val[0], 1.0 - val[1]])
-
-            # val = [float(v) for v in line.split()[1:]]
-            # texcoords.append([val[0], 1.0 - val[1]])
         ## 顶点法线
         elif prefix == 'vn':
             normals.append([float(v) for v in line.split()[1:]])
 
-
+    # 没有纹理坐标时给所有顶点同一个 UV，避免下游出现空张量
     if len(texcoords)==0:
         texcoords.append([0.5,0.5])
-    # if len(texcoords)==0:
-    #     texcoords.append([0.0,0.0])
 
     # load faces
     activeMatIdx = None
@@ -145,8 +113,6 @@ def load_obj(filename, clear_ks=True, mtl_override=None):
         # 跳过空白行
         if len(line.split()) == 0:
             continue
-        # if line in "o 1":
-        #     break
 
         prefix = line.split()[0].lower()
         if prefix == 'usemtl': # Track used materials
@@ -156,39 +122,11 @@ def load_obj(filename, clear_ks=True, mtl_override=None):
                 used_materials.append(mat)
             activeMatIdx = used_materials.index(mat)
         elif prefix == 'f': # Parse face
-            # print(line)
-            vs = line.split()[1:] ##
-            nv = len(vs)
-            vv = vs[0].split('/')
-            # 格式  v/t/n   顶点、纹理、法线向量的index
-            if len(vv)==1:
-                v0=int(vv[0]) - 1
-                t0=-1
-                n0=-1
-            else:
-                v0 = int(vv[0]) - 1
-                t0 = int(vv[1]) - 1 if vv[1] != "" else -1
-                n0 = int(vv[2]) - 1 if vv[2] != "" else -1
-
-
-            for i in range(nv - 2): # Triangulate polygons
-
-                vv = vs[i + 1].split('/')
-                v1 = int(vv[0]) - 1
-                if len(vv)==1:
-                    t1=-1
-                    n1=-1
-                else:
-                    t1 = int(vv[1]) - 1 if vv[1] != "" else -1
-                    n1 = int(vv[2]) - 1 if vv[2] != "" else -1
-                vv = vs[i + 2].split('/')
-                v2 = int(vv[0]) - 1
-                if len(vv)==1:
-                    t2=-1
-                    n2=-1
-                else:
-                    t2 = int(vv[1]) - 1 if vv[1] != "" else -1
-                    n2 = int(vv[2]) - 1 if vv[2] != "" else -1
+            corners = [_parse_face_corner(token) for token in line.split()[1:]]
+            for i in range(len(corners) - 2): # Triangulate polygons
+                v0, t0, n0 = corners[0]
+                v1, t1, n1 = corners[i + 1]
+                v2, t2, n2 = corners[i + 2]
                 mfaces.append(activeMatIdx)
                 faces.append([v0, v1, v2])
                 tfaces.append([t0, t1, t2])
@@ -196,14 +134,9 @@ def load_obj(filename, clear_ks=True, mtl_override=None):
 
     assert len(tfaces) == len(faces) and len(nfaces) == len (faces)
 
-    # print("materials:",[ i["name"] for i in  all_materials])
-    # print("used materials:",[ i["name"] for i in  used_materials])
-    # print([ i for sub in tfaces for i in sub ])
     # Create an "uber" material by combining all textures into a larger texture
-    # for mat in used_materials:
-    #     print(mat["bsdf"])
-
-    print(len(used_materials))
+    if not used_materials:
+        used_materials = [all_materials[0]]
     if len(used_materials) > 1:
         uber_material, texcoords, tfaces = material.merge_materials(used_materials, texcoords, tfaces, mfaces)
     else:

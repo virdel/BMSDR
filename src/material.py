@@ -12,7 +12,6 @@ import torch
 
 from . import util
 from . import texture
-from . import mesh
 
 ######################################################################################
 # .mtl material format loading / storing
@@ -26,11 +25,10 @@ def load_mtl(fn, clear_ks=True):
     mtl_path = os.path.dirname(fn)
 
     # Read file  utf-8处理中文字符情况
-    print("mtl_path:",fn)
     try:
         with open(fn,encoding="utf-8") as f:
             lines = f.readlines()
-    except:
+    except UnicodeDecodeError:
         with open(fn) as f:
             lines = f.readlines()
 
@@ -60,7 +58,6 @@ def load_mtl(fn, clear_ks=True):
     # Convert everything to textures. Our code expects 'kd' and 'ks' to be texture maps. So replace constants with 1x1 maps
 
     for mat in materials:
-        print(mat)
         if not 'bsdf' in mat:  ##
             mat['bsdf'] = 'pbr'
         if 'map_kd' in mat:
