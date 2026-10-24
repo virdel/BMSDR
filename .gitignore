@@ -14,8 +14,9 @@ Thumbs.db
 desktop.ini
 
 # ---------------------------------------------------------------------------
-# Experiment data, scripts and generated outputs (tens of GB, kept outside git)
+# Model data, scripts and generated outputs (tens of GB, kept outside git)
 # ---------------------------------------------------------------------------
+/data/
 /experiment/
 /out/
 /model_data/

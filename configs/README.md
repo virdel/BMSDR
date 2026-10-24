@@ -10,7 +10,7 @@ JSON 里的键和命令行参数同名（下划线写法），例如
 
 ```bash
 python train.py --config configs/example.json \
-    --ref-mesh experiment/data/models/0001/mesh.obj \
+    --ref-mesh data/buildings/0001/mesh.obj \
     -o out/0001
 ```
 

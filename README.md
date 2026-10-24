@@ -63,7 +63,7 @@ pip install -r requirements.txt
 ### 完整流程：参考模型 -> QEM 简化 -> UV 展开 -> 纹理/几何优化
 
 ```bash
-python train.py --config configs/example.json --ref-mesh experiment/data/models/0001/mesh.obj -o out/0001
+python train.py --config configs/example.json --ref-mesh data/buildings/0001/mesh.obj -o out/0001
 ```
 
 不传 `-o` 时输出到 `out/<模型目录名>/`。流程会自动：
@@ -114,7 +114,8 @@ python -m unittest discover -s tests -v
 
 ## 数据说明
 
-整个 `experiment/` 目录（模型、训练结果、实验统计等，约 45 GB）都不纳入 Git
+把待处理模型放到 `data/` 下（例如 `data/buildings/0001/mesh.obj`）即可；
+模型、训练输出与实验数据（如 `data/`、`out/`，合计可达数十 GB）都不纳入 Git
 跟踪，已在 [`.gitignore`](.gitignore) 中整体忽略；文件仍保留在本地磁盘。
 `main` 只跟踪代码、配置和文档。
 
