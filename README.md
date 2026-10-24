@@ -1,23 +1,135 @@
-# nvdiffmodeling 
+# nvdiffmodeling
 
-![Teaser image](https://research.nvidia.com/sites/default/files/publications/teaser_7.png "Teaser image")
+基于 NVIDIA [nvdiffmodeling](https://github.com/NVlabs/nvdiffmodeling)（论文
+*Appearance-Driven Automatic 3D Model Simplification*）的可微渲染模型简化工程。
+本仓库在原始代码上做了精简：去掉 Blender / pymeshlab / xatlas 依赖，内置一个
+纯 Python 的分块 UV 展开器，并把实验性代码集中到 `dev` 分支。
 
-Differentiable rasterization applied to 3D model simplification tasks, as described in the paper:
+## 分支说明
 
-**Appearance-Driven Automatic 3D Model Simplification**<br>
-Jon Hasselgren, Jacob Munkberg, Jaakko Lehtinen, Miika Aittala and Samuli Laine<br>
-https://research.nvidia.com/publication/2021-04_Appearance-Driven-Automatic-3D <br>
-https://arxiv.org/abs/2104.03989 <br>
+| 分支 | 内容 |
+| --- | --- |
+| `main` | 精简主线：QEM 简化 + 内置 UV 展开 + 训练流程，只保留运行所需代码 |
+| `dev` | 历史/实验代码：Blender 与 xatlas 的 UV 方案、alpha shape、批量与联合训练脚本、指标统计脚本等 |
 
-# License
+旧流程的代码没有删除，只是从 `main` 移到了 `dev`：
 
-Copyright � 2021, NVIDIA Corporation. All rights reserved.
+```bash
+git checkout dev    # 查看旧的 Blender / alpha shape / 批量实验代码
+git checkout main   # 回到精简主线
+```
 
-This work is made available under the [Nvidia Source Code License](https://github.com/NVlabs/nvdiffmodeling/blob/main/LICENSE.txt).
+## 主要改动
 
-For business inquiries, please visit our website and submit the form: [NVIDIA Research Licensing](https://www.nvidia.com/en-us/research/inquiries/)<br>
+1. **移除 Blender 依赖。** 原 `python_blender.py` 只是为了调用
+   `bpy.ops.uv.smart_project`。现在由 [`src/uv_unwrap.py`](src/uv_unwrap.py)
+   用标准库实现：
+   - 按法线夹角（默认 66°）在网格上生长 UV 岛；
+   - 把每个岛投影到平均平面；
+   - 用 shelf packing 把岛排进 `[0,1]²`，岛与岛之间留 margin；
+   - 输出 `mesh_alpha_uv.obj` / `.mtl`，顶点按岛复制，UV 连续且不跨岛重叠。
+   对同一份 4.2 万面的 QEM 结果，Blender 生成 31780 个 UV 岛，本实现生成
+   29478 个，效果相当，但不依赖外部程序、结果可复现。
+2. **训练入口重构。** `train.py` 不再硬编码 `E:\...` 路径和批量实验开关，
+   改为 `--ref-mesh / --base-mesh / --out-dir / --config` 参数；配置优先级为
+   *默认值 < JSON 配置 < 命令行参数*。
+3. **删除死代码。** 去掉未使用的 depth/chamfer loss、重复的 config 写入、
+   大量注释掉的备选实现和调试输出。
+4. **QEM 调用更安全。** [`src/simplify.py`](src/simplify.py) 使用
+   `subprocess` 参数列表调用 `bin/qem/qem.exe`，路径带空格也不会出错。
+5. **OBJ 预处理修复。** [`src/check_obj_file.py`](src/check_obj_file.py)
+   流式读写，保持原文件编码（UTF-8/GBK），不再把 GBK 模型强制改写成 UTF-8。
 
-# Citation
+## 环境
+
+- Windows（QEM 可执行文件为 Windows 版本）
+- Python 3.8+（原始 README 的 3.6 也可运行）
+- CUDA + 支持 CUDA 的 PyTorch
+- [nvdiffrast](https://nvlabs.github.io/nvdiffrast/)（按官方说明从源码安装）
+- 其余依赖见 [`requirements.txt`](requirements.txt)
+
+```bash
+pip install -r requirements.txt
+# 再按 https://nvlabs.github.io/nvdiffrast/ 安装 nvdiffrast
+```
+
+## 快速开始
+
+### 完整流程：参考模型 -> QEM 简化 -> UV 展开 -> 纹理/几何优化
+
+```bash
+python train.py --config configs/example.json --ref-mesh experiment/data/models/0001/mesh.obj -o out/0001
+```
+
+不传 `-o` 时输出到 `out/<模型目录名>/`。流程会自动：
+
+1. 清理参考 OBJ 中 CGAL 不支持的 `l` 记录；
+2. 调用 `bin/qem/qem.exe` 生成 `mesh_qem_3000.obj`；
+3. 调用内置 UV 展开生成 `mesh_alpha_uv.obj` / `.mtl`；
+4. 运行可微渲染优化，输出 `mesh/`、`mesh_initial/`、损失曲线和 `config.json`。
+
+### 已有初始网格（跳过简化和 UV 展开）
+
+```bash
+python train.py --ref-mesh data/spot/spot.obj --base-mesh data/sphere.obj --base-mtl data/sphere.mtl -o out/spot
+```
+
+`--base-mesh` 必须自带 UV（或通过 `--base-mtl` 指定材质）。
+
+### 只做 UV 展开
+
+```bash
+python -m src.uv_unwrap input.obj out_dir --name mesh_alpha_uv --angle 66 --margin 0.002
+```
+
+参数：
+
+- `--angle`：同一 UV 岛内相邻面法线最大夹角（度），越小岛越多、纹理越碎；
+- `--margin`：岛间留白（UV 单位）。
+
+### 只做 QEM 简化
+
+```bash
+python -m src.simplify input.obj out_dir
+```
+
+### 测试
+
+UV 展开器只依赖标准库，可以直接跑单元测试：
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+## 配置与参数
+
+命令行参数与 JSON 配置同名（下划线/连字符均可），例如
+`--train-res`、`--texture-res 1024 1024`、`--normal-weight 0.01`。
+配置里可以写 `ref_mesh`、`base_mesh`、`out_dir`，命令行会覆盖配置。
+
+## 数据说明
+
+`experiment/` 下的模型与训练结果约 45 GB，已写入 [`.gitignore`](.gitignore)，
+不会进入 Git 历史；它们仍保留在本地磁盘上。`main` 只跟踪代码、配置和文档。
+
+## 目录
+
+```
+train.py              训练/优化入口
+src/uv_unwrap.py      内置 UV 展开（无第三方依赖）
+src/simplify.py       QEM 简化封装
+src/check_obj_file.py OBJ 预处理与统计
+src/                  可微渲染核心（上游代码）
+bin/qem/              QEM 可执行文件
+configs/              示例配置
+tests/                UV 展开单元测试
+dev 分支              Blender/xatlas UV、alpha shape、批量训练、指标统计等历史代码
+```
+
+## License & Citation
+
+Copyright © 2021, NVIDIA Corporation. 本工程基于 NVIDIA Source Code License 发布，
+详见 [LICENSE.txt](LICENSE.txt)。
 
 ```
 @inproceedings{Hasselgren2021,
@@ -27,71 +139,3 @@ For business inquiries, please visit our website and submit the form: [NVIDIA Re
   year      = {2021}
 }
 ```
-
-# Installation
-
-Requirements:
- - [Microsoft Visual Studio](https://visualstudio.microsoft.com/) 2019+ with Microsoft Visual C++ installed
- - [Cuda](https://developer.nvidia.com/cuda-toolkit) 10.2+
- - [Pytorch](https://pytorch.org/) 1.6+
-
-Tested in Anaconda3 with Python 3.6 and PyTorch 1.8.
-
-## One time setup (Windows)
-
-1. Install [Microsoft Visual Studio](https://visualstudio.microsoft.com/) 2019+ with Microsoft Visual C++. 
-2. Install [Cuda](https://developer.nvidia.com/cuda-toolkit) 10.2 or above. **Note:** Install CUDA toolkit from https://developer.nvidia.com/cuda-toolkit (not through anaconda)
-3. Install the appropriate version of PyTorch compatible with the installed Cuda toolkit.
-Below is an example with Cuda 11.1
-
-```
-conda create -n dmodel python=3.6
-activate dmodel
-conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch -c conda-forge
-conda install imageio
-pip install PyOpenGL glfw
-```
-
-4. Install [nvdiffrast](https://github.com/NVlabs/nvdiffrast) in the `dmodel` conda env. Follow the [installation instructions](https://nvlabs.github.io/nvdiffrast/#windows).
-
-### Every new command prompt
-`activate dmodel`
-
-Examples
-========
-
-Sphere to cow example:
-```
-python train.py --config configs/spot.json
-```
-The results will be stored in the `out` folder.
-The [Spot](http://www.cs.cmu.edu/~kmcrane/Projects/ModelRepository/index.html#spot) model was 
-created and released into the public domain by [Keenan Crane](http://www.cs.cmu.edu/~kmcrane/index.html).
-
-[Additional assets can be downloaded here](https://github.com/NVlabs/nvdiffmodeling/releases/download/v1.0/assets.zip) [205MB].
-Unzip and place the subfolders in the project `data` folder, e.g., `data\skull`.
-All assets are copyright of their respective authors, see included license files for further details.
-
-Included examples
-- `skull.json` - Joint normal map and shape optimization on a skull
-- `ewer.json`  - Ewer model from a reduced mesh as initial guess
-- `gardenina.json` - Aggregate geometry example
-- `hibiscus.json` - Aggregate geometry example
-- `dancer_brushed_gold_64.json` - LOD example, trained against a supersampled reference
-- `dancer_displacement.json` - Joint shape, normal map, and displacement map example
-
-The json files that end in `_paper.json` are configs with the settings used
-for the results in the paper. They take longer and require a GPU with sufficient memory.
-
-Server usage (through Docker)
-=============================
-
-- Build docker image (run the command from the code root folder).
-`docker build -f docker/Dockerfile -t diffmod:v1 .`
-Requires a driver that supports Cuda 10.1 or newer.
-
-- Start an interactive docker container:
-`docker run --gpus device=0 -it --rm -v /raid:/raid -it diffmod:v1 bash`
-
-- Detached docker:
-`docker run --gpus device=1 -d -v /raid:/raid -w=[path to the code] diffmod:v1 python train.py --config configs/spot.json`
