@@ -121,7 +121,7 @@ src/simplify.py       QEM 简化封装
 src/check_obj_file.py OBJ 预处理与统计
 src/                  可微渲染核心（上游代码）
 bin/qem/              QEM 可执行文件
-configs/              示例配置
+configs/              示例配置（example.json + upstream/ 原始论文配置，见 configs/README.md）
 tests/                UV 展开单元测试
 dev 分支              Blender/xatlas UV、alpha shape、批量训练、指标统计等历史代码
 ```
