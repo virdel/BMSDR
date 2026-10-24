@@ -1,16 +1,21 @@
-# nvdiffmodeling
+# BMS-DR
 
-基于 NVIDIA [nvdiffmodeling](https://github.com/NVlabs/nvdiffmodeling)（论文
-*Appearance-Driven Automatic 3D Model Simplification*）的可微渲染模型简化工程。
-本仓库在原始代码上做了精简：去掉 Blender / pymeshlab / xatlas 依赖，内置一个
-纯 Python 的分块 UV 展开器，并把实验性代码集中到 `dev` 分支。
+**BMS-DR**（**B**uilding **M**esh **S**implification with **D**ifferentiable **R**endering）
+是一个面向建筑模型的可微渲染简化工程：用可微渲染拟合纹理与几何，把建筑高模简化为
+带贴图的低模。它基于 NVIDIA [nvdiffmodeling](https://github.com/NVlabs/nvdiffmodeling)
+（论文 *Appearance-Driven Automatic 3D Model Simplification*），在其之上做了精简：
+去掉 Blender / pymeshlab / xatlas 依赖，内置纯 Python 的分块 UV 展开器，并把
+实验性代码集中到 `dev` 分支。
+
+适用模型：建筑、古建、城市部件等以硬表面/平面为主的网格（QEM 简化 + UV 展开 +
+纹理/几何联合优化）。
 
 ## 分支说明
 
 | 分支 | 内容 |
 | --- | --- |
 | `main` | 精简主线：QEM 简化 + 内置 UV 展开 + 训练流程，只保留运行所需代码 |
-| `dev` | 历史/实验代码：Blender 与 xatlas 的 UV 方案、alpha shape、批量与联合训练脚本、指标统计脚本等 |
+| `dev` | 历史/实验代码：Blender 与 xatlas 的 UV 方案、alpha shape、批量与联合训练脚本等 |
 
 旧流程的代码没有删除，只是从 `main` 移到了 `dev`：
 

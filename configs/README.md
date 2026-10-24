@@ -34,7 +34,7 @@ python train.py --config configs/example.json \
 
 ## upstream/
 
-原始 nvdiffmodeling 论文/示例配置，保留用于复现。它们都带有
+上游 nvdiffmodeling 的论文/示例配置，保留用于复现。它们都带有
 `base_mesh`，因此会直接使用给定的初始网格，不触发 QEM 和 UV 展开。
 
 这些配置引用 `data/` 下的官方 assets（README 中的 assets.zip，约 205 MB），

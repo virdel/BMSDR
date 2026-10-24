@@ -536,7 +536,7 @@ DEFAULT_FLAGS = {
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="Appearance-driven mesh simplification (nvdiffmodeling)",
+        description="BMS-DR: Building mesh simplification with differentiable rendering",
         argument_default=argparse.SUPPRESS,
     )
     parser.add_argument('-i', '--iter', type=int, help='optimization iterations')
