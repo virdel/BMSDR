@@ -813,6 +813,7 @@ DEFAULT_FLAGS = {
     "ref_mesh": None,
     "base_mesh": None,
     "base_mtl": None,
+    "uv": False,
     "config": None,
 }
 
@@ -866,11 +867,15 @@ def build_parser():
     )
     parser.add_argument(
         "-bm", "--base-mesh", "--base_mesh", dest="base_mesh",
-        help="initial mesh; skips QEM simplification and UV generation"
+        help="initial mesh; skips QEM simplification"
     )
     parser.add_argument(
         "--base-mtl", "--base_mtl", dest="base_mtl",
         help="material override for --base-mesh"
+    )
+    parser.add_argument(
+        "--uv", action="store_true",
+        help="generate UV coordinates for --base-mesh with src.uv_unwrap"
     )
     parser.add_argument(
         "--qem-exe", dest="qem_exe", default=None,
@@ -915,17 +920,22 @@ def prepare_base_mesh(FLAGS):
     """返回初始低模及其材质路径。
 
     优先级：
-    1. ``--base-mesh`` 显式提供（跳过 QEM 和 UV）；
+    1. ``--base-mesh`` 显式提供（跳过 QEM；加 ``--uv`` 时用内置展开器补 UV）；
     2. 否则对参考模型执行 QEM 简化，再用内置 UV 展开生成低模。
     """
     if FLAGS.base_mesh:
         base_mesh = str(Path(FLAGS.base_mesh).expanduser().resolve())
         if not Path(base_mesh).is_file():
             raise IOError("base mesh not found: %s" % base_mesh)
+        print("Using provided base mesh: %s" % base_mesh)
+        if getattr(FLAGS, "uv", False):
+            # 外部简化工具（Blender / Simplygon / QEM）导出的网格常没有 UV，
+            # 这里用内置展开器补一套，后续训练流程与默认 QEM 流程一致。
+            print("Generating UV coordinates for the provided base mesh ...")
+            return generate_uv(base_mesh, FLAGS.out_dir)
         base_mtl = FLAGS.base_mtl
         if base_mtl:
             base_mtl = str(Path(base_mtl).expanduser().resolve())
-        print("Using provided base mesh: %s" % base_mesh)
         return base_mesh, base_mtl
 
     print("Simplifying reference mesh with QEM ...")

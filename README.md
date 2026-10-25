@@ -76,13 +76,22 @@ python train.py --config configs/example.json --ref-mesh data/buildings/0001/mes
 3. 调用内置 UV 展开生成 `mesh_alpha_uv.obj` / `.mtl`；
 4. 运行可微渲染优化，输出 `mesh/`、`mesh_initial/`、损失曲线和 `config.json`。
 
-### 已有初始网格（跳过简化和 UV 展开）
+### 已有初始网格（跳过简化）
 
 ```bash
 python train.py --ref-mesh data/spot/spot.obj --base-mesh data/sphere.obj --base-mtl data/sphere.mtl -o out/spot
 ```
 
-`--base-mesh` 必须自带 UV（或通过 `--base-mtl` 指定材质）。
+`--base-mesh` 自带 UV 时直接使用；如果外部简化工具导出的网格没有 UV，
+加上 `--uv` 让内置展开器补一套：
+
+```bash
+python train.py --ref-mesh ref.obj --base-mesh clean.obj --uv -o out/clean
+```
+
+> 提示：`bin/qem/qem.exe` 对多组件/非流形建筑网格可能产生尖刺。若默认流程
+> 生成的初始网格异常，可先用 Blender / Simplygon 等简化，再通过
+> `--base-mesh ... --uv` 传入。
 
 ### 只做 UV 展开
 
